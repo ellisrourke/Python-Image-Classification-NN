@@ -1,0 +1,208 @@
+import sys
+import numpy as np
+import random
+import load_data as ld
+
+
+# Utility sigmoid function
+
+
+
+class NeuralNetwork():
+    def __init__(self, sizes, n_epochs=30, batch_size=20, l_rate=3.0,biases=None, weights=None):
+
+        self.sizes = sizes
+        self.n_epochs = n_epochs
+        self.batch_size = batch_size
+        self.l_rate = l_rate
+
+        # Initialise biases and weight, if they are not passed as a param,
+        # randomly select them from a standard normal distribution
+        # (mean 0, variance 1)
+        if biases and weights:
+            self.biases = biases
+            self.weights = weights
+        else:
+            self.biases = [np.random.randn(y, 1) for y in sizes[1:]]
+            self.weights = [np.random.randn(y, x) for x, y in zip(sizes[:-1], sizes[1:])]
+
+        # This method takes the input x and calculates the Net Input
+        # for each neuron, it then uses the sigmoid function to
+        # squash the Net Inputs and give us the activation for each neuron
+        # The method returns an array of net inputs and an array of activations
+
+    def sigmoid(self, z, prime=False):
+        if prime:
+            return self.sigmoid(z) * (1 - self.sigmoid(z))
+        return 1.0 / (1.0 + np.exp(-z))
+
+
+    def forward_pass(self, x,y):
+        out = x
+        activations = [x]  # list for activations for each layer
+        net = []  # list to store all the NetIn values of each layer
+        for bias, weight in zip(self.biases, self.weights):
+            # Calculation of net In
+            # dot produce of weights and associated activations + bias
+            net_in = np.dot(weight, out) + bias
+            net.append(net_in)
+
+            # Squash the netIn with sigmoid to get the activation.
+            # This activation will be used in the next iteration to calculate
+            # the net input of the next layer neurons
+            out = self.sigmoid(net_in)
+            activations.append(out)
+
+        return net, activations
+
+    # Takes the net inputs of each neuron in each layer, and the
+    # activations of each neuron in each layer and performs the
+    # backward propagation to give us the partial derivative
+    # of each weight with respect to the total error
+    def backward_pass(self, y, net, activations):
+        # For storing partial derivatives of weights and biases
+        # with respect to total error
+        del_b = [np.zeros(b.shape) for b in self.biases]
+        del_w = [np.zeros(w.shape) for w in self.weights]
+
+        # First Calculate the total error cost derivatives,
+        # derivatives of (output layer minus target layer squared)
+        # for each neuron is
+        del_error = (activations[-1] - y)
+
+        # Second calculate the partial derivatives of the output layer activations
+        # with respect to the net inputs of the output layer
+        # This can be achieved by passing the net inputs into sigmoid prime.
+        del_act = self.sigmoid(net[-1], prime=True)
+
+        # Next we calculate the how much each how much the net input
+        # of each neuron in the output layer changes with respect to
+        # the incoming weights
+        # This value is calculated to be the activation of the
+        # hidden layer neuron from which the weight is coming from
+
+        del_e_a = del_error * del_act  # used below
+
+        # for the biases this value is 1
+        # therefore plugging it together we get
+        del_b[-1] = del_e_a * 1
+        # for the weights we use the activation of the hidden layer
+        del_w[-1] = np.dot(del_e_a, activations[-2].transpose())
+
+        # Repeat a similar process to above but for the input layer weight
+        # with respect to the hidden layer
+        del_e_a = np.dot(self.weights[-1].transpose(), del_e_a) * \
+                  self.sigmoid(net[-2], prime=True)
+
+        # Plugging it together we get
+        del_b[-2] = del_e_a
+        del_w[-2] = np.dot(del_e_a, activations[-3].transpose())
+
+        return del_b, del_w
+
+    # This method simply divides training data into mini batches
+    def initialise_mini_batches(self, training_data):
+        return [training_data[i:i + self.batch_size]
+                for i in range(0, len(training_data), self.batch_size)]
+
+    def SGD(self, training_data, test_data):
+        """
+        :param training_data: training data contains (x, y) tuples where
+        x is a 784-dimensional numpy ndarry representing the input image and y
+        is a 10-dimensional numpy ndarry of 0 to 9 where the index represents
+        the desired digit output.
+        :param test_data: data that will be used to test the accuracy of the
+        neural network for each epoch iteration
+        """
+
+        # Split the training set into batches of size batch_size
+        batches = self.initialise_mini_batches(training_data)
+
+        # These numpy arrays are used to store the sum of the
+        # partial derivatives of the total error with respect to
+        # the biases and weights for each batch.
+        # After each batch completion, the average
+        # of each derivative will be taken and used to update our
+        # weights and biases for the next batch.
+        del_b = [np.zeros(b.shape) for b in self.biases]
+        del_w = [np.zeros(w.shape) for w in self.weights]
+
+        for i_epoch in range(self.n_epochs):
+            for i_batch in range(len(batches)):
+
+                # Get all samples in the current batch
+                current_batch = batches[i_batch]
+
+                # Current batch size
+                batch_size = len(current_batch)
+
+                # For each sample in the current batch
+                for x, y in current_batch:
+                    # Forward pass to get our net inputs for each neuron
+                    # in each layer, and our activations for each neuron in each
+                    # layer
+                    net, activations = self.forward_pass(x, y)
+                    # Backward propagation
+                    delta_del_b, delta_del_w = self.backward_pass(y, net, activations)
+                    # Continue to sum (all partial derivatives of the total error
+                    # that have respect to each weight and bias)
+                    del_b = [db + ddb for db, ddb in zip(del_b, delta_del_b)]
+                    del_w = [dw + ddw for dw, ddw in zip(del_w, delta_del_w)]
+
+                # For each weight take the calculated partial derivative sum, divide it
+                # by batch size to get the average then multiple it by the learning rate,
+                # finally, minus that value from the current weight to get our new weights.
+                self.weights = [w - self.l_rate * (w_sum / batch_size)
+                                for w, w_sum in zip(self.weights, del_w)]
+                # Do the same for the biases
+                self.biases = [b - self.l_rate * (b_sum / batch_size)
+                               for b, b_sum in zip(self.biases, del_b)]
+
+                # Check our network's current state against the test data
+                correct_sum = self.evaluate_test_data(test_data)
+                print("Correctness: {}/{} for Epoch: {}".format(correct_sum, len(test_data), i_epoch))
+
+    def feed_input(self, x):
+        # Feeds x through the network and returns the output vector
+        for b, w in zip(self.biases, self.weights):
+            x = self.sigmoid(np.dot(w, x) + b)  # vector of output layer activations
+        return x
+
+    def evaluate_test_data(self, test_data):
+        """
+        This method will run the test data through the
+        neural network and look for the digit (index) of the output
+        layer that holds the highest probability and check this value against
+        the true desired output. The will be repeated and the sum of correct
+        matches will be returned
+        """
+        # Vector of tuple (x, y) where x is the largest probability digit
+        # produced from the network and y is the desired output
+        results = [(np.argmax(self.feed_input(x)), y)
+                   for (x, y) in test_data]
+
+        # Return the sum off correct predictions
+        return sum(int(x == y) for (x, y) in results)
+
+
+
+nInput = sys.argv[1]
+nHidden = sys.argv[2]
+nOutput = sys.argv[3]
+
+training_data, test_data = ld.load_data("./data/TestDigitX.csv.gz", "./data/TestDigitY.csv.gz", "./data/TrainDigitX.csv.gz", "./data/TrainDigitY.csv.gz")
+
+nn = NeuralNetwork(sizes=[784, 30, 10])
+nn.SGD(training_data, test_data)
+
+biases = [
+    np.array([[0.1], [0.1]]),
+    np.array([[0.1], [0.1]])
+]
+
+weights = [
+    np.array([[0.1, 0.1], [0.2, 0.1]]),
+    np.array([[0.1, 0.1], [0.1, 0.2]])
+]
+
+#nn = NeuralNetwork(sizes=[nInput, nHidden, nOutput], biases=biases, weights=weights)
