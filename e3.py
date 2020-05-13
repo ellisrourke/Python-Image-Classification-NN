@@ -1,7 +1,8 @@
 import numpy as np
+import sys
 import gzip
 import matplotlib.pyplot as plt
-
+import load_data as ld
 def meanSquareError(target,prediction):
     return np.mean(np.power(target-prediction,2))
 
@@ -42,9 +43,17 @@ class fullyConectedLayer(Layer):
         return self.output
 
     def backwardPropagation(self,outputError,learningRate):
-        inputError = np.dot(outputError,self.weights.T)
-        weighsError = np.dot(self.input.T,outputError)
+        #print("shapes=> ")
+        #print("outputError = " ,outputError.shape)
+        #print("weights = " ,self.weights.transpose().shape," weights[1] =", self.weights.transpose().shape[1])
+        #print("input = " ,self.input.shape)
 
+        #a = self.weights.transpose().shape[1]
+        #b = outputError.shape[0]
+        #print(a,b," Proposed shape")
+        self.input = self.input.reshape((outputError.shape[0],self.weights.transpose().shape[1],))
+        inputError = np.dot(outputError,self.weights.transpose())
+        weighsError = np.dot(self.input.transpose(),outputError)
         self.weights -= learningRate*weighsError
         self.bias -= learningRate*outputError
         return inputError
@@ -90,6 +99,7 @@ class neuralNetwork:
         samples = len(x)
 
         for i in range(numEpochs):
+            print(i,'/')
             err = 0
             for j in range(samples):
                 output = x[j]
@@ -102,10 +112,8 @@ class neuralNetwork:
                 for layer in reversed(self.layers):
                     error = layer.backwardPropagation(error,learningRate)
             err /= samples
+
             print('epoch',i+1,'/',numEpochs," error=",err)
-
-
-
 
 #for i in range(2):
     #img = training_data[i][0].reshape((28,28))
@@ -119,15 +127,28 @@ class neuralNetwork:
 x_train = np.array([[[0,0]], [[0,1]], [[1,0]], [[1,1]]])
 y_train = np.array([[[0]], [[1]], [[1]], [[0]]])
 
+print("Loading Data...")
+"""
+trainX = np.loadtxt("data/TrainDigitX.csv.gz", delimiter=',')
+trainY = np.loadtxt("data/TrainDigitY.csv.gz", delimiter=',')
+testX = np.loadtxt("data/TestDigitX.csv.gz", delimiter=',')
+testY = np.loadtxt("data/TestDigitY.csv.gz", delimiter=',')
+"""
+
+trainX, trainY, testX, testY = ld.load_data("data/TrainDigitX.csv.gz","data/TrainDigitY.csv.gz","data/TestDigitX.csv.gz","data/TestDigitY.csv.gz")
+
+print('x train shape',trainX.shape)
+
+
+print("Data Loaded...")
 
 network = neuralNetwork()
-network.addLayer(fullyConectedLayer(2,3))
+network.addLayer(fullyConectedLayer(28*28,100))
 network.addLayer(activationLayer(tanh,tanh_prime))
-network.addLayer(fullyConectedLayer(3,1))
+network.addLayer(fullyConectedLayer(100,50))
 network.addLayer(activationLayer(tanh,tanh_prime))
-
+network.addLayer(fullyConectedLayer(50,10))
+network.addLayer(activationLayer(tanh,tanh_prime))
 network.setLossFuntion(meanSquareError, meanSquareErrorDerivative)
-
-network.trainNetwork(x_train,y_train, 2000, 0.1)
-
+network.trainNetwork(trainX,trainY,1000,0.1)
 
