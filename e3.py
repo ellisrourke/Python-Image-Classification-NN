@@ -1,4 +1,5 @@
 import numpy as np
+import np_utils
 import sys
 import gzip
 import matplotlib.pyplot as plt
@@ -97,9 +98,7 @@ class neuralNetwork:
 
     def trainNetwork(self,x,y,numEpochs,learningRate):
         samples = len(x)
-
         for i in range(numEpochs):
-            print(i,'/')
             err = 0
             for j in range(samples):
                 output = x[j]
@@ -137,6 +136,11 @@ testY = np.loadtxt("data/TestDigitY.csv.gz", delimiter=',')
 
 trainX, trainY, testX, testY = ld.load_data("data/TrainDigitX.csv.gz","data/TrainDigitY.csv.gz","data/TestDigitX.csv.gz","data/TestDigitY.csv.gz")
 
+"""------------------TESTING-----------------------"""
+
+
+"""----------------TESTING END--------------------"""
+
 print('x train shape',trainX.shape)
 
 
@@ -144,11 +148,20 @@ print("Data Loaded...")
 
 network = neuralNetwork()
 network.addLayer(fullyConectedLayer(28*28,100))
-network.addLayer(activationLayer(tanh,tanh_prime))
+network.addLayer(activationLayer(sigmoid,sigmoidDerivative))
 network.addLayer(fullyConectedLayer(100,50))
-network.addLayer(activationLayer(tanh,tanh_prime))
+network.addLayer(activationLayer(sigmoid,sigmoidDerivative))
 network.addLayer(fullyConectedLayer(50,10))
-network.addLayer(activationLayer(tanh,tanh_prime))
+network.addLayer(activationLayer(sigmoid,sigmoidDerivative))
 network.setLossFuntion(meanSquareError, meanSquareErrorDerivative)
-network.trainNetwork(trainX,trainY,1000,0.1)
+network.trainNetwork(trainX[0:1],trainY[0:1],1,3)
 
+out = network.predictLabel(testX[0:10])
+
+
+for i in range(10):
+    exp = testY[i][np.amax(testY[i])]
+    act = np.where(out[i] == np.amax(out[i]))
+    print(exp,act)
+
+#print(testY[0:10])
