@@ -97,6 +97,9 @@ class neuralNetwork:
         return result
 
     def trainNetwork(self,x,y,numEpochs,learningRate):
+        errorOverTime = []
+        plt.plot(errorOverTime)
+
         samples = len(x)
         for i in range(numEpochs):
             err = 0
@@ -113,6 +116,9 @@ class neuralNetwork:
             err /= samples
 
             print('epoch',i+1,'/',numEpochs," error=",err)
+            errorOverTime.append(err)
+            plt.show()
+
 
 #for i in range(2):
     #img = training_data[i][0].reshape((28,28))
@@ -154,14 +160,19 @@ network.addLayer(activationLayer(sigmoid,sigmoidDerivative))
 network.addLayer(fullyConectedLayer(50,10))
 network.addLayer(activationLayer(sigmoid,sigmoidDerivative))
 network.setLossFuntion(meanSquareError, meanSquareErrorDerivative)
-network.trainNetwork(trainX[0:1],trainY[0:1],1,3)
+network.trainNetwork(trainX[0:10000],trainY[0:10000],50,3)
 
-out = network.predictLabel(testX[0:10])
+out = network.predictLabel(testX[0:100])
 
 
-for i in range(10):
-    exp = testY[i][np.amax(testY[i])]
-    act = np.where(out[i] == np.amax(out[i]))
+correct = 0
+for i in range(100):
+    exp = np.argmax(testY[i])
+    act = np.argmax(out[i][0])
+    #print(out[i][0])
+    if(exp==act):
+        correct+=1
+
     print(exp,act)
-
+print("model accuracy: ",correct/100)
 #print(testY[0:10])
