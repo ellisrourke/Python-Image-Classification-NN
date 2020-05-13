@@ -117,7 +117,7 @@ class neuralNetwork:
 
             print('epoch',i+1,'/',numEpochs," error=",err)
             errorOverTime.append(err)
-            plt.show()
+        plt.show()
 
 
 #for i in range(2):
@@ -160,19 +160,16 @@ network.addLayer(activationLayer(sigmoid,sigmoidDerivative))
 network.addLayer(fullyConectedLayer(50,10))
 network.addLayer(activationLayer(sigmoid,sigmoidDerivative))
 network.setLossFuntion(meanSquareError, meanSquareErrorDerivative)
-network.trainNetwork(trainX[0:10000],trainY[0:10000],50,3)
+network.trainNetwork(trainX[0:1000],trainY[0:1000],50,3)
 
-out = network.predictLabel(testX[0:100])
-
+out = network.predictLabel(testX[0:500])
 
 correct = 0
-for i in range(100):
+for i in range(500):
     exp = np.argmax(testY[i])
     act = np.argmax(out[i][0])
-    #print(out[i][0])
     if(exp==act):
         correct+=1
 
     print(exp,act)
-print("model accuracy: ",correct/100)
-#print(testY[0:10])
+print("model accuracy: ",correct/500)
