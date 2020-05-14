@@ -3,7 +3,7 @@ import np_utils
 import sys
 import gzip
 import matplotlib.pyplot as plt
-import load_data as ld
+import dataLoader
 def meanSquareError(target,prediction):
     return np.mean(np.power(target-prediction,2))
 
@@ -140,7 +140,7 @@ testX = np.loadtxt("data/TestDigitX.csv.gz", delimiter=',')
 testY = np.loadtxt("data/TestDigitY.csv.gz", delimiter=',')
 """
 
-trainX, trainY, testX, testY = ld.load_data("data/TrainDigitX.csv.gz","data/TrainDigitY.csv.gz","data/TestDigitX.csv.gz","data/TestDigitY.csv.gz")
+trainX, trainY, testX, testY = dataLoader.load_mnist("data/TrainDigitX.csv.gz","data/TrainDigitY.csv.gz","data/TestDigitX.csv.gz","data/TestDigitY.csv.gz")
 
 """------------------TESTING-----------------------"""
 
